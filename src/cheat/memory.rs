@@ -10,7 +10,7 @@ use std::mem::MaybeUninit;
 
 pub struct Memory {
     pub process_id: u32,
-    pub handle: HANDLE,
+    pub handle: HANDLE
 }
 
 
@@ -86,6 +86,24 @@ impl Memory {
             self.read::<u32>(address) as *const c_void
         }
     }
+
+    pub unsafe fn read_il2cpp_string(&self, string_ptr: *const c_void) -> String {
+      unsafe {
+          if string_ptr.is_null() {
+              return String::new();
+          }
+          let str__length: i32 = self.read::<i32>(string_ptr.add(0x08));
+          if str__length <= 0 || str__length > 256 {
+              return String::new(); // null/garbage guard
+          }
+          let mut utf16 = Vec::with_capacity(str__length as usize);
+          for i in 0..str__length as usize {
+              utf16.push(self.read::<u16>(string_ptr.add(0x0C + i * 2)));
+          }
+          String::from_utf16_lossy(&utf16)
+      }
+  }
+
 }
 
 impl Drop for Memory {
